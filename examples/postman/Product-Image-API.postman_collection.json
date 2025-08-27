@@ -1,0 +1,583 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789012",
+		"name": "Image Finder API",
+		"description": "Complete collection for testing the Image Finder API endpoints.\n\n## Setup\n1. Set the `base_url` variable to your API endpoint\n2. Set the `api_key` variable to your Bearer token\n3. Run the requests in order for best results\n\n## Features Tested\n- Product image creation with various parameters\n- Image existence checking\n- Image deletion\n- Error handling scenarios\n- Rate limiting\n- Authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has status property\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('status');",
+							"    pm.expect(jsonData.status).to.eql('healthy');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if the API is running and healthy"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Laptop Image",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"Response has required properties\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('success');",
+							"    pm.expect(jsonData).to.have.property('imageUrl');",
+							"    pm.expect(jsonData).to.have.property('fileName');",
+							"    pm.expect(jsonData.success).to.eql(true);",
+							"});",
+							"",
+							"pm.test(\"Image URL is valid\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.imageUrl).to.match(/^https?:\\/\\/.+\\.(png|jpg|jpeg)$/);",
+							"});",
+							"",
+							"// Store the image URL for later use",
+							"if (pm.response.code === 201) {",
+							"    const jsonData = pm.response.json();",
+							"    pm.environment.set(\"laptop_image_url\", jsonData.imageUrl);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"productId\": \"LAP-POSTMAN-001\",\n  \"productType\": \"Laptop\",\n  \"brand\": \"TechBrand\",\n  \"description\": \"15-inch gaming laptop with RTX 4070 graphics card\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/product-image",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image"
+					]
+				},
+				"description": "Create a product image for a laptop using brand and description"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Product with UPC",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"Response has success property\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.success).to.eql(true);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"productId\": \"UPC-POSTMAN-001\",\n  \"productType\": \"Electronics\",\n  \"upc\": \"123456789012\",\n  \"brand\": \"Samsung\",\n  \"description\": \"Wireless noise-cancelling headphones\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/product-image",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image"
+					]
+				},
+				"description": "Create a product image using UPC code"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Book with ISBN",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"Response structure is correct\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.all.keys('success', 'imageUrl', 'fileName');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"productId\": \"BOOK-POSTMAN-001\",\n  \"productType\": \"Book\",\n  \"isbn\": \"9781234567897\",\n  \"description\": \"Complete guide to modern web development\",\n  \"brand\": \"Tech Publisher\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/product-image",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image"
+					]
+				},
+				"description": "Create a book image using ISBN"
+			},
+			"response": []
+		},
+		{
+			"name": "Check Image Exists",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Image exists\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.exists).to.eql(true);",
+							"    pm.expect(jsonData).to.have.property('imageUrl');",
+							"    pm.expect(jsonData).to.have.property('fileName');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/product-image/LAP-POSTMAN-001",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image",
+						"LAP-POSTMAN-001"
+					]
+				},
+				"description": "Check if the laptop image exists"
+			},
+			"response": []
+		},
+		{
+			"name": "Check Non-Existent Image",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"Image does not exist\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.exists).to.eql(false);",
+							"    pm.expect(jsonData).to.have.property('message');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/product-image/NON-EXISTENT-999",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image",
+						"NON-EXISTENT-999"
+					]
+				},
+				"description": "Test 404 response for non-existent image"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Product Image",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 or 404\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+							"});",
+							"",
+							"if (pm.response.code === 200) {",
+							"    pm.test(\"Deletion successful\", function () {",
+							"        const jsonData = pm.response.json();",
+							"        pm.expect(jsonData.success).to.eql(true);",
+							"    });",
+							"} else {",
+							"    pm.test(\"Image not found for deletion\", function () {",
+							"        const jsonData = pm.response.json();",
+							"        pm.expect(jsonData.success).to.eql(false);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/product-image/LAP-POSTMAN-001",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image",
+						"LAP-POSTMAN-001"
+					]
+				},
+				"description": "Delete the laptop image"
+			},
+			"response": []
+		},
+		{
+			"name": "Error - Missing Product ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"Error message is correct\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.include('Product ID is required');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"productType\": \"Laptop\",\n  \"description\": \"This will fail - no productId\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/product-image",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image"
+					]
+				},
+				"description": "Test validation error for missing productId"
+			},
+			"response": []
+		},
+		{
+			"name": "Error - No Search Parameters",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"Error message mentions search parameters\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.include('At least one of');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"productId\": \"FAIL-001\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/product-image",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image"
+					]
+				},
+				"description": "Test validation error for missing search parameters"
+			},
+			"response": []
+		},
+		{
+			"name": "Error - Unauthorized",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 401\", function () {",
+							"    pm.response.to.have.status(401);",
+							"});",
+							"",
+							"pm.test(\"Authentication error\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('error');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/product-image/TEST-001",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"product-image",
+						"TEST-001"
+					]
+				},
+				"description": "Test authentication error (no API key)"
+			},
+			"response": []
+		},
+		{
+			"name": "Admin - Clear Cache",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Cache clear response\", function () {",
+							"    const jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('success');",
+							"    pm.expect(jsonData).to.have.property('message');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{api_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/admin/cache/clear",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"admin",
+						"cache",
+						"clear"
+					]
+				},
+				"description": "Clear the image cache (admin endpoint)"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set a timestamp for dynamic product IDs",
+					"pm.environment.set('timestamp', Date.now());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test for response time",
+					"pm.test(\"Response time is less than 30 seconds\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(30000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"description": "Base URL for the Image Finder API"
+		},
+		{
+			"key": "api_key",
+			"value": "your-api-key-here",
+			"description": "Bearer token for API authentication"
+		}
+	]
+}

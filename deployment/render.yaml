@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: image-finder
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_STORAGE_CONTAINER
+        value: product-images
+      - key: API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PIXABAY_API_KEY
+        sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: ENABLE_IMAGE_CACHE
+        value: true
+      - key: MAX_IMAGE_CACHE_SIZE
+        value: "1000"
+    disk:
+      name: cache-disk
+      sizeGB: 10
+      mountPath: /usr/src/app/cache
+    autoDeploy: true
+    
+databases:
+  - name: api-postgres
+    databaseName: productimageapi
+    user: apiuser
+    region: oregon
+    plan: starter
+
+  - name: api-redis
+    region: oregon
+    plan: starter

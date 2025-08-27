@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Storage Image Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-azure-storage/2.10.3/bundle/azure-storage.blob.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/azure/11.8.0/msal-browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #0078d4;
+            text-align: center;
+        }
+        .login-section {
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .config-section {
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0078d4;
+            color: white;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #005a9e;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .image-card {
+            background-color: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .image-card:hover {
+            transform: scale(1.03);
+        }
+        .image-container {
+            height: 200px;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .image-info {
+            padding: 12px;
+        }
+        .image-info h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .image-info p {
+            margin: 4px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            margin: 30px auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 1000px;
+            background-color: white;
+            border-radius: 8px;
+        }
+        .modal-image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-image-container img {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+        .modal-info {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #0078d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Azure Storage Image Viewer</h1>
+        
+        <div class="login-section" id="loginSection">
+            <h2>Azure Authentication</h2>
+            <div>
+                <label for="tenantId">Tenant ID:</label>
+                <input type="text" id="tenantId" placeholder="Enter your Azure AD tenant ID">
+            </div>
+            <div>
+                <label for="clientId">Client ID:</label>
+                <input type="text" id="clientId" placeholder="Enter your application client ID">
+            </div>
+            <div>
+                <label for="redirectUri">Redirect URI:</label>
+                <input type="text" id="redirectUri" value="http://localhost:8080" placeholder="Enter your redirect URI">
+            </div>
+            <button id="loginButton">Sign in with Microsoft</button>
+            <div id="loginStatus" class="status"></div>
+        </div>
+        
+        <div class="config-section hidden" id="configSection">
+            <h2>Storage Configuration</h2>
+            <div>
+                <label for="storageAccount">Storage Account Name:</label>
+                <input type="text" id="storageAccount" placeholder="Enter your storage account name">
+            </div>
+            <div>
+                <label for="containerName">Container Name:</label>
+                <input type="text" id="containerName" placeholder="Enter your container name">
+            </div>
+            <button id="loadImagesButton">Load Images</button>
+        </div>
+        
+        <div id="loader" class="loader"></div>
+        <div id="status" class="status"></div>
+        
+        <div class="image-grid" id="imageGrid"></div>
+    </div>
+    
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="Enlarged image">
+            </div>
+            <div class="modal-info" id="modalInfo"></div>
+        </div>
+    </div>
+    
+    <script>
+        // MSAL configuration for Azure AD authentication
+        let msalConfig = {
+            auth: {
+                clientId: '',
+                authority: '',
+                redirectUri: ''
+            },
+            cache: {
+                cacheLocation: 'sessionStorage',
+                storeAuthStateInCookie: false
+            }
+        };
+        
+        let msalInstance;
+        let accessToken = '';
+        let accountInfo = null;
+        
+        // Initialize MSAL instance when login button is clicked
+        document.getElementById('loginButton').addEventListener('click', async () => {
+            const tenantId = document.getElementById('tenantId').value;
+            const clientId = document.getElementById('clientId').value;
+            const redirectUri = document.getElementById('redirectUri').value;
+            
+            if (!tenantId || !clientId) {
+                showStatus('Please enter Tenant ID and Client ID', 'error');
+                return;
+            }
+            
+            msalConfig.auth.clientId = clientId;
+            msalConfig.auth.authority = `https://login.microsoftonline.com/${tenantId}`;
+            msalConfig.auth.redirectUri = redirectUri;
+            
+            try {
+                msalInstance = new msal.PublicClientApplication(msalConfig);
+                
+                // Check if there are cached accounts
+                const accounts = msalInstance.getAllAccounts();
+                if (accounts.length > 0) {
+                    accountInfo = accounts[0];
+                    await acquireToken();
+                } else {
+                    // If no cached accounts, initiate login
+                    const loginResponse = await msalInstance.loginPopup({
+                        scopes: ['https://storage.azure.com/user_impersonation']
+                    });
+                    accountInfo = loginResponse.account;
+                    await acquireToken();
+                }
+            } catch (error) {
+                showStatus(`Authentication failed: ${error.message}`, 'error');
+                console.error('Login error:', error);
+            }
+        });
+        
+        // Acquire access token
+        async function acquireToken() {
+            try {
+                showLoader(true);
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['https://storage.azure.com/user_impersonation'],
+                    account: accountInfo
+                });
+                
+                accessToken = tokenResponse.accessToken;
+                showStatus('Successfully authenticated with Azure AD', 'success');
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('configSection').classList.remove('hidden');
+                showLoader(false);
+            } catch (error) {
+                console.error('Token acquisition error:', error);
+                
+                // Fall back to popup if silent acquisition fails
+                try {
+                    const tokenResponse = await msalInstance.acquireTokenPopup({
+                        scopes: ['https://storage.azure.com/user_impersonation']
+                    });
+                    accessToken = tokenResponse.accessToken;
+                    showStatus('Successfully authenticated with Azure AD', 'success');
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('configSection').classList.remove('hidden');
+                } catch (err) {
+                    showStatus(`Failed to acquire token: ${err.message}`, 'error');
+                }
+                showLoader(false);
+            }
+        }
+        
+        // Load images from the container
+        document.getElementById('loadImagesButton').addEventListener('click', async () => {
+            const storageAccount = document.getElementById('storageAccount').value;
+            const containerName = document.getElementById('containerName').value;
+            
+            if (!storageAccount || !containerName) {
+                showStatus('Please enter Storage Account and Container Name', 'error');
+                return;
+            }
+            
+            try {
+                showLoader(true);
+                await loadImagesFromContainer(storageAccount, containerName);
+                showLoader(false);
+            } catch (error) {
+                showStatus(`Failed to load images: ${error.message}`, 'error');
+                showLoader(false);
+            }
+        });
+        
+        // Function to load images from the Azure Storage container
+        async function loadImagesFromContainer(storageAccount, containerName) {
+            const blobServiceUrl = `https://${storageAccount}.blob.core.windows.net`;
+            
+            // Create a BlobServiceClient with a token credential
+            const blobServiceClient = new Azure.Blob.BlobServiceClient(blobServiceUrl, new Azure.Blob.TokenCredential(accessToken));
+            
+            // Get a reference to the container
+            const containerClient = blobServiceClient.getContainerClient(containerName);
+            
+            // List all blobs in the container
+            const imageGrid = document.getElementById('imageGrid');
+            imageGrid.innerHTML = '';
+            
+            let blobs = [];
+            
+            try {
+                // Get list of blobs
+                for await (const blob of containerClient.listBlobsFlat()) {
+                    // Filter for only image files (PNG or JPG)
+                    if (blob.name.toLowerCase().endsWith('.png') || 
+                        blob.name.toLowerCase().endsWith('.jpg') || 
+                        blob.name.toLowerCase().endsWith('.jpeg')) {
+                        blobs.push(blob);
+                    }
+                }
+                
+                if (blobs.length === 0) {
+                    showStatus('No images found in this container', 'error');
+                    return;
+                }
+                
+                showStatus(`Found ${blobs.length} images`, 'success');
+                
+                // Process each blob and create UI elements
+                for (const blob of blobs) {
+                    const blobClient = containerClient.getBlobClient(blob.name);
+                    
+                    // Generate a SAS token for the blob
+                    const sasUrl = await generateBlobSasUrl(blobClient, accessToken, storageAccount, containerName);
+                    
+                    // Create image card
+                    const imageCard = document.createElement('div');
+                    imageCard.className = 'image-card';
+                    
+                    // Format file size
+                    const fileSizeFormatted = formatFileSize(blob.properties.contentLength);
+                    
+                    // Format modified date
+                    const modifiedDate = new Date(blob.properties.lastModified);
+                    const modifiedDateFormatted = modifiedDate.toLocaleString();
+                    
+                    imageCard.innerHTML = `
+                        <div class="image-container">
+                            <img src="${sasUrl}" alt="${blob.name}" loading="lazy">
+                        </div>
+                        <div class="image-info">
+                            <h3 title="${blob.name}">${blob.name}</h3>
+                            <p>Size: ${fileSizeFormatted}</p>
+                            <p>Modified: ${modifiedDateFormatted}</p>
+                        </div>
+                    `;
+                    
+                    // Add click event to show modal
+                    imageCard.addEventListener('click', () => {
+                        const modal = document.getElementById('imageModal');
+                        const modalImg = document.getElementById('modalImage');
+                        const modalInfo = document.getElementById('modalInfo');
+                        
+                        modalImg.src = sasUrl;
+                        modalImg.alt = blob.name;
+                        
+                        modalInfo.innerHTML = `
+                            <h3>${blob.name}</h3>
+                            <p>Size: ${fileSizeFormatted}</p>
+                            <p>Modified: ${modifiedDateFormatted}</p>
+                            <p>Content Type: ${blob.properties.contentType || 'Unknown'}</p>
+                            <p>Created: ${new Date(blob.properties.createdOn).toLocaleString()}</p>
+                        `;
+                        
+                        modal.style.display = 'block';
+                    });
+                    
+                    imageGrid.appendChild(imageCard);
+                }
+            } catch (error) {
+                throw new Error(`Error listing blobs: ${error.message}`);
+            }
+        }
+        
+        // Generate a SAS URL for a blob
+        async function generateBlobSasUrl(blobClient, accessToken, storageAccount, containerName) {
+            // For security reasons, we'll use the existing token rather than generating a SAS token
+            // This requires CORS to be properly configured on the Azure Storage account
+            return `${blobClient.url}?${new URLSearchParams({
+                'sv': '2020-08-04',
+                'rsct': 'image/png',
+                'token': accessToken
+            })}`;
+        }
+        
+        // Close the modal when the user clicks on <span> (x)
+        document.querySelector('.close').addEventListener('click', () => {
+            document.getElementById('imageModal').style.display = 'none';
+        });
+        
+        // Close the modal when the user clicks anywhere outside of the modal content
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Helper function to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            
+            return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Show/hide loader
+        function showLoader(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = 'status';
+            
+            if (type) {
+                statusElement.classList.add(type);
+            }
+        }
+    </script>
+</body>
+</html>

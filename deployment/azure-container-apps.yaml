@@ -1,0 +1,101 @@
+# Azure Container Apps Configuration
+# This provides the scalability benefits of serverless with the flexibility of containers
+
+apiVersion: 2022-10-01
+location: East US
+name: image-finder
+properties:
+  managedEnvironmentId: /subscriptions/{subscription-id}/resourceGroups/{rg-name}/providers/Microsoft.App/managedEnvironments/{environment-name}
+  configuration:
+    secrets:
+      - name: azure-storage-connection
+        value: "{storage-connection-string}"
+      - name: api-key
+        value: "{api-key}"
+      - name: openai-api-key
+        value: "{openai-key}"
+      - name: pixabay-key
+        value: "{pixabay-key}"
+      - name: unsplash-key
+        value: "{unsplash-key}"
+      - name: pexels-key
+        value: "{pexels-key}"
+    registries:
+      - server: {your-registry}.azurecr.io
+        username: {registry-username}
+        passwordSecretRef: acr-password
+    ingress:
+      external: true
+      targetPort: 3000
+      traffic:
+        - weight: 100
+          latestRevision: true
+      corsPolicy:
+        allowedOrigins:
+          - "https://yourdomain.com"
+          - "https://app.yourdomain.com"
+        allowedMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        allowedHeaders:
+          - "*"
+        allowCredentials: false
+  template:
+    containers:
+      - image: {your-registry}.azurecr.io/image-finder:latest
+        name: image-finder
+        resources:
+          cpu: 2.0
+          memory: 4Gi
+        env:
+          - name: PORT
+            value: "3000"
+          - name: NODE_ENV
+            value: "production"
+          - name: AZURE_STORAGE_CONNECTION_STRING
+            secretRef: azure-storage-connection
+          - name: AZURE_STORAGE_CONTAINER
+            value: "product-images"
+          - name: API_KEY
+            secretRef: api-key
+          - name: OPENAI_API_KEY
+            secretRef: openai-api-key
+          - name: PIXABAY_API_KEY
+            secretRef: pixabay-key
+          - name: UNSPLASH_ACCESS_KEY
+            secretRef: unsplash-key
+          - name: PEXELS_API_KEY
+            secretRef: pexels-key
+          - name: ENABLE_IMAGE_CACHE
+            value: "true"
+          - name: MAX_IMAGE_CACHE_SIZE
+            value: "1000"
+        probes:
+          - type: Liveness
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          - type: Readiness
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+    scale:
+      minReplicas: 0
+      maxReplicas: 10
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "10"
+        - name: cpu-scaling
+          custom:
+            type: cpu
+            metadata:
+              type: Utilization
+              value: "70"

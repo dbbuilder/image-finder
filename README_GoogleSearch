@@ -1,0 +1,62 @@
+# Setting Up Google Custom Search API
+
+To use Google Images as the first search source in your product image API, you'll need to set up a Google Custom Search Engine and get API credentials. Here's how:
+
+## 1. Create a Google Cloud Project
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable billing for your project (required for the Custom Search API)
+
+## 2. Enable the Custom Search API
+
+1. In your Google Cloud project, go to "APIs & Services" > "Library"
+2. Search for "Custom Search API"
+3. Click on it and press "Enable"
+
+## 3. Create API Key
+
+1. Go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "API Key"
+3. Copy your API key
+4. (Optional but recommended) Restrict the API key to only the Custom Search API
+
+## 4. Create a Custom Search Engine
+
+1. Go to the [Programmable Search Engine Control Panel](https://programmablesearchengine.google.com/create/new)
+2. Enter a name for your search engine (e.g., "Product Image Search")
+3. Under "What to search":
+   - Choose "Search the entire web"
+   - Or for better quality but fewer results, specify sites with high-quality product images
+4. Click "Create"
+5. In your search engine settings:
+   - Go to "Setup" > "Basics"
+   - Enable "Image search"
+   - Turn ON "Search the entire web"
+   - Save changes
+6. Copy your "Search engine ID" (cx)
+
+## 5. Add Credentials to Your .env File
+
+Add these lines to your .env file:
+
+```
+GOOGLE_API_KEY=your_api_key_here
+GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id_here
+```
+
+## 6. Usage Notes
+
+- Google Custom Search API has a **free quota of 100 queries per day**
+- Beyond that, it costs approximately $5 per 1000 queries
+- The API will automatically filter for high-quality matches, but only if they exist
+- You can adjust the filtering criteria in the `filterQualityImages` function
+
+## 7. API Restrictions (Important)
+
+For production use, consider restricting your API key:
+1. In Google Cloud Console, go to the API key settings
+2. Under "Application restrictions", you might want to restrict it to your server IP
+3. Under "API restrictions", restrict it to just the "Custom Search API"
+
+This prevents unauthorized use of your API key, which could lead to unexpected charges.
